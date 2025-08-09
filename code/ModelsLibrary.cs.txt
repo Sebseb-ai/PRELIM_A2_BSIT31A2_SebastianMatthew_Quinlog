@@ -1,0 +1,15 @@
+// Models/Library.cs
+using System.Collections.Generic;
+
+namespace LibraryManagementSystem.Models
+{
+    public class Library
+    {
+        public int LibraryId { get; set; }
+        public string Name { get; set; }
+        public string Location { get; set; }
+        
+        // Navigation property (one-to-many relationship with Book)
+        public List<Book> Books { get; set; } = new List<Book>();
+    }
+}
