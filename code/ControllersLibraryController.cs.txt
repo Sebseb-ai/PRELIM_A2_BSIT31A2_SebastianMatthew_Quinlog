@@ -1,0 +1,127 @@
+// Controllers/LibraryController.cs
+using System.Collections.Generic;
+using System.Linq;
+using LibraryManagementSystem.Models;
+using Microsoft.AspNetCore.Mvc;
+
+namespace LibraryManagementSystem.Controllers
+{
+    public class LibraryController : Controller
+    {
+        // In-memory data storage (for demo purposes)
+        private static List<Library> _libraries = new List<Library>();
+        private static List<Book> _books = new List<Book>();
+        private static List<Author> _authors = new List<Author>();
+        private static List<User> _users = new List<User>();
+        private static int _nextId = 1;
+
+        // GET: Library/Index
+        public IActionResult Index()
+        {
+            return View(_libraries);
+        }
+
+        // GET: Library/Books
+        public IActionResult Books()
+        {
+            var booksWithAuthors = _books.Select(b => new {
+                Book = b,
+                AuthorName = _authors.FirstOrDefault(a => a.AuthorId == b.AuthorId)?.Name
+            }).ToList();
+            
+            return View(booksWithAuthors);
+        }
+
+        // GET: Library/AddBook
+        public IActionResult AddBook()
+        {
+            ViewBag.Authors = _authors;
+            ViewBag.Libraries = _libraries;
+            return View();
+        }
+
+        // POST: Library/AddBook
+        [HttpPost]
+        public IActionResult AddBook(Book book, int libraryId)
+        {
+            book.BookId = _nextId++;
+            _books.Add(book);
+            
+            var library = _libraries.FirstOrDefault(l => l.LibraryId == libraryId);
+            library?.Books.Add(book);
+            
+            return RedirectToAction("Books");
+        }
+
+        // GET: Library/BorrowBook
+        public IActionResult BorrowBook()
+        {
+            ViewBag.Users = _users;
+            ViewBag.AvailableBooks = _books.Where(b => b.IsAvailable).ToList();
+            return View();
+        }
+
+        // POST: Library/BorrowBook
+        [HttpPost]
+        public IActionResult BorrowBook(int userId, int bookId)
+        {
+            var user = _users.FirstOrDefault(u => u.UserId == userId);
+            var book = _books.FirstOrDefault(b => b.BookId == bookId);
+            
+            if (user != null && book != null && book.IsAvailable)
+            {
+                book.IsAvailable = false;
+                user.BorrowedBooks.Add(book);
+                book.BorrowedByUsers.Add(user);
+            }
+            
+            return RedirectToAction("Books");
+        }
+
+        // GET: Library/ReturnBook
+        public IActionResult ReturnBook()
+        {
+            ViewBag.Users = _users;
+            return View();
+        }
+
+        // POST: Library/ReturnBook
+        [HttpPost]
+        public IActionResult ReturnBook(int userId, int bookId)
+        {
+            var user = _users.FirstOrDefault(u => u.UserId == userId);
+            var book = _books.FirstOrDefault(b => b.BookId == bookId);
+            
+            if (user != null && book != null && !book.IsAvailable)
+            {
+                book.IsAvailable = true;
+                user.BorrowedBooks.Remove(book);
+                book.BorrowedByUsers.Remove(user);
+            }
+            
+            return RedirectToAction("Books");
+        }
+
+        // Helper methods to seed initial data (for testing)
+        public IActionResult SeedData()
+        {
+            if (!_authors.Any())
+            {
+                _authors.Add(new Author { AuthorId = 1, Name = "J.K. Rowling", Biography = "British author best known for Harry Potter" });
+                _authors.Add(new Author { AuthorId = 2, Name = "George R.R. Martin", Biography = "American novelist known for A Song of Ice and Fire" });
+                
+                _users.Add(new User { UserId = 1, Username = "john_doe", Email = "john@example.com" });
+                _users.Add(new User { UserId = 2, Username = "jane_smith", Email = "jane@example.com" });
+                
+                _libraries.Add(new Library { LibraryId = 1, Name = "Central Library", Location = "Main Street" });
+                
+                _books.Add(new Book { BookId = 1, Title = "Harry Potter and the Philosopher's Stone", ISBN = "9780747532743", AuthorId = 1 });
+                _books.Add(new Book { BookId = 2, Title = "A Game of Thrones", ISBN = "9780553103540", AuthorId = 2 });
+                
+                _nextId = 3;
+            }
+            
+            return RedirectToAction("Index");
+        }
+    }
+}
